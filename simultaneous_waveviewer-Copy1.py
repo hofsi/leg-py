@@ -10,8 +10,7 @@ def simul_viewer(
     entry: int | list[int] = 0,
     y_lim_correction: tuple[float | str | pint.Quantity] = [9800,10600],
     x_lim_correction: tuple[float | str | pint.Quantity] = [0,450000],
-    size: tuple[float] = (14, 4),
-    stacked_view: bool = True,
+    size: tuple[float] = (24, 10),
 ) -> None:
     
     plt.rcParams["figure.figsize"] = size
@@ -42,7 +41,5 @@ def simul_viewer(
         browserlist[i].draw_entry(entry,False,False) 
         if i < len(browserlist)-1:
             browserlist[i+1].set_figure(browserlist[i])
-        if not stacked_view:
-            plt.show()
     return ;
 
