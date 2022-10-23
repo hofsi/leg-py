@@ -15,6 +15,7 @@ def simul_viewer(
     size: tuple[float] = (14, 4),
     stacked_view: bool = True,
     data_dir: str = "raw",
+    linestyle: str = "-",
        
     base_path: str = "",
     entry_list: list[int] | list[list[int]] = None,
@@ -59,7 +60,7 @@ def simul_viewer(
         browserlist.append(WaveformBrowser(
             files_in=lh5_file[i],
             lh5_group=a,
-            styles=[{'ls':['--'], 'c':[colourpalette[i]]}],
+            styles=[{'ls':[linestyle], 'c':[colourpalette[i]]}],
             y_lim=y_lim,
             x_lim=x_lim,
             base_path = base_path,
