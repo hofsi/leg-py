@@ -10,8 +10,8 @@ def simul_viewer(
     include_channel: list[str] = ["OB-01","OB-02","OB-03","OB-05"],
     entry: int | list[int] = 0,
     lines: str | list[str] = "waveform",
-    y_lim: tuple[float | str | pint.Quantity] = [0,40],
-    x_lim: tuple[float | str | pint.Quantity] = [0,20],
+    y_lim: tuple[float | str | pint.Quantity] = None, #some data needs returns an error if no area is given
+    x_lim: tuple[float | str | pint.Quantity] = None,
     size: tuple[float] = (14, 4),
     stacked_view: bool = True,
     data_dir: str = "raw",
