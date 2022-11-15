@@ -8,7 +8,7 @@ from pygama.vis.waveform_browser import WaveformBrowser
 def simul_viewer(
     lh5_file_in: str | list[str],
     include_channel: list[str] = ["OB-01","OB-02","OB-03","OB-05"],
-    entry: int | list[int] = 0,
+    entry: list[int] =  [0],
     lines: str | list[str] = "waveform",
     y_lim: tuple[float | str | pint.Quantity] = None, #some data needs returns an error if no area is given
     x_lim: tuple[float | str | pint.Quantity] = None,
@@ -48,7 +48,9 @@ def simul_viewer(
     
     channel=[channel_dict[i]+data_dir for i in include_channel]
         
-    colourpalette = [('#'+format(round(255/len(channel)*i), '02x')+format(round(255-255/len(channel)*i), '02x')+'96') for i in range(len(channel))]
+    length= len(channel)*len(entry)
+    colourpalette = [('#'+format(round((255/length)*i), '02x')+format(round(255-(255/length)*i), '02x')+'96') for i in range(length)]
+    print(colourpalette)
     
     if not isinstance(lh5_file_in, list):
         lh5_file = [lh5_file_in for i in channel]
@@ -56,35 +58,41 @@ def simul_viewer(
         lh5_file = lh5_file_in
     
     browserlist = []
-    for i,a in enumerate(channel):
-        browserlist.append(WaveformBrowser(
-            files_in=lh5_file[i],
-            lh5_group=a,
-            styles=[{'ls':[linestyle], 'c':[colourpalette[i]]}],
-            y_lim=y_lim,
-            x_lim=x_lim,
-            base_path = base_path,
-            entry_list = entry_list,
-            entry_mask = entry_mask,
-            dsp_config = dsp_config,
-            database = database,
-            aux_values = aux_values,
-            lines = lines,
-            legend = legend,
-            legend_opts = legend_opts,
-            n_drawn = n_drawn,
-            x_unit = x_unit,
-            norm = norm,
-            align = align,
-            buffer_len = buffer_len,
-            block_width = block_width,
-        ))
-
-    for i,a in enumerate(browserlist):
-        browserlist[i].draw_entry(entry,False,False) 
-        if i < len(browserlist)-1:
-            browserlist[i+1].set_figure(browserlist[i])
-        if not stacked_view:
-            plt.show()
+    print("Entrylength:", len(entry))
+    for j,b in enumerate(entry):
+        print("Entry:" , j)
+        for i,a in enumerate(channel):
+            print("Channel:" , i)
+            print("Pos:" , i+(len(channel))*j)
+            browserlist.append(WaveformBrowser(
+                files_in=lh5_file[i],
+                lh5_group=a,
+                styles=[{'ls':[linestyle], 'c':[colourpalette[i+(len(channel))*j]]}],
+                y_lim=y_lim,
+                x_lim=x_lim,
+                base_path = base_path,
+                entry_list = entry_list,
+                entry_mask = entry_mask,
+                dsp_config = dsp_config,
+                database = database,
+                aux_values = aux_values,
+                lines = lines,
+                legend = legend,
+                legend_opts = legend_opts,
+                n_drawn = n_drawn,
+                x_unit = x_unit,
+                norm = norm,
+                align = align,
+                buffer_len = buffer_len,
+                block_width = block_width,
+            ))
+    print(len(browserlist))
+    for j,b in enumerate(entry):
+        for i,a in enumerate(channel):
+            browserlist[i+(len(channel))*j].draw_entry(j,False,False) 
+            if i+(len(channel))*j < len(browserlist)-1:
+                browserlist[i+(len(channel))*j+1].set_figure(browserlist[0])
+            if not stacked_view:
+                plt.show()
     return browserlist[-1];
 
