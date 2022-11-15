@@ -50,7 +50,6 @@ def simul_viewer(
         
     length= len(channel)*len(entry)
     colourpalette = [('#'+format(round((255/length)*i), '02x')+format(round(255-(255/length)*i), '02x')+'96') for i in range(length)]
-    print(colourpalette)
     
     if not isinstance(lh5_file_in, list):
         lh5_file = [lh5_file_in for i in channel]
@@ -58,12 +57,8 @@ def simul_viewer(
         lh5_file = lh5_file_in
     
     browserlist = []
-    print("Entrylength:", len(entry))
     for j,b in enumerate(entry):
-        print("Entry:" , j)
         for i,a in enumerate(channel):
-            print("Channel:" , i)
-            print("Pos:" , i+(len(channel))*j)
             browserlist.append(WaveformBrowser(
                 files_in=lh5_file[i],
                 lh5_group=a,
@@ -89,7 +84,7 @@ def simul_viewer(
     print(len(browserlist))
     for j,b in enumerate(entry):
         for i,a in enumerate(channel):
-            browserlist[i+(len(channel))*j].draw_entry(j,False,False) 
+            browserlist[i+(len(channel))*j].draw_entry(b,False,False) 
             if i+(len(channel))*j < len(browserlist)-1:
                 browserlist[i+(len(channel))*j+1].set_figure(browserlist[0])
             if not stacked_view:
