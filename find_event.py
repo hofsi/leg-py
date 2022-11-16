@@ -33,7 +33,8 @@ def find_event(
     funk2_var = [1],
     funk3 = nofunk,
     funk3_var = [1],
-    include_channel: list[str] = ["OB-01"],
+    minfit: float = 10000,
+    include_channel: list[str] = ["OB-01","OB-02"],
     data_dir: str = "/raw/waveform/values",
     simul_process: int = 1, 
     
@@ -55,10 +56,13 @@ def find_event(
         event = []
         for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
             #print(f"entry {entry}, energy = {lh5_obj} ({n_rows} rows)") #do not run it with buffer_len=1
-            fitness.append(funk1(lh5_obj.nda[0],funk1_var) /funk1_var[0])
-            fitness[entry] += funk2(lh5_obj.nda[0],funk2_var) /funk2_var[0]
-            fitness[entry] += funk3(lh5_obj.nda[0],funk3_var) /funk3_var[0]
-            event.append(entry)
+            fit =  funk1(lh5_obj.nda[0],funk1_var) /funk1_var[0]
+            fit += funk2(lh5_obj.nda[0],funk2_var) /funk2_var[0]
+            fit += funk3(lh5_obj.nda[0],funk3_var) /funk3_var[0]
+            
+            if (fit > minfit):
+                fitness.append(fit)
+                event.append(entry)
         channel_fitness.append(fitness)
         event_list.append(event)
     return channel_fitness,event_list
