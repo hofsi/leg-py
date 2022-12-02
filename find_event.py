@@ -12,15 +12,9 @@ from pygama.lgdo.lh5_store import ls
 
 store=lh5.LH5Store()
 
-def nofunk(
-    data: np.ndarray,
-    var: list,
-    ):
-    return 0
-
 """
 var array
-0: scaling       | Scales the output of the analysis function
+0: scaling       | Scales the output of the analysis function                    | Used to invert small values
 1: min value     | Minimum value of analysis function to accept input event      | Takes effect after scaling
 2: max value     | Maximum value of analysis function to accept input event      | Takes effect after scaling
 3: start         | Start point of analysis in Event
@@ -31,12 +25,8 @@ var array
 
 def find_event(
     file,
-    funk1 = nofunk,
-    funk1_var = [1,0,0,0,0],
-    funk2 = nofunk,
-    funk2_var = [1,0,0,0,0],
-    funk3 = nofunk,
-    funk3_var = [1,0,0,0,0],
+    funk:list() = [],
+    funk_var:list[list[int]] = [[]],
     minfit: float = 0,
     include_channel: list[str] = ["OB-01","OB-02"],
     data_dir: str = "/raw/waveform/values",
@@ -62,21 +52,12 @@ def find_event(
             #print(f"entry {entry}, energy = {lh5_obj} ({n_rows} rows)") #do not run it with buffer_len=1
             fit = 0
             
-            val = funk1(lh5_obj.nda[0],funk1_var) /funk1_var[0]
-            if (val >= funk1_var[1] and val <= funk1_var[2]):
-                fit += val
-            else:
-                continue
-            val = funk2(lh5_obj.nda[0],funk2_var) /funk2_var[0]
-            if (val >= funk2_var[1] and val <= funk2_var[2]):
-                fit += val
-            else:
-                continue
-            val = funk3(lh5_obj.nda[0],funk3_var) /funk3_var[0]
-            if (val >= funk3_var[1] and val <= funk3_var[2]):
-                fit += val
-            else:
-                continue
+            for num,fun in enumerate(funk):
+                val = fun(lh5_obj.nda[0],funk_var[num]) /funk_var[num][0]
+                if (val >= funk_var[num][1] and val <= funk_var[num][2]):
+                    fit += val
+                else:
+                    continue          
             if (fit > minfit):
                 fitness.append(fit)
                 event.append(entry)
@@ -84,26 +65,41 @@ def find_event(
         event_list.append(event)
     return channel_fitness,event_list
         
-    
-def median(
+# Funktions for find_event
+#returns the average of the event
+def average(
     data: np.ndarray,
     var: list,
     ):
     data = data[var[3]:var[4]]
     return np.average(data)
-"""
+
+#returns the first absolute maxiumum of the event
 def max_val(
     data: np.ndarray,
     var: list,
 ):
-    return 0
-
+    data = data[var[3]:var[4]]    
+    maxi = np.nanmax(data)
+    if isinstance(maxi, list):
+        return maxi[0]
+    else:
+        return maxi
+    
+#returns the first absolute miniumum of the event
 def min_val(
     data: np.ndarray,
     var: list,
 ):
-    return 0
-"""
+    data = data[var[3]:var[4]]
+    data = data[var[3]:var[4]]    
+    mini = np.nanmin(data)
+    if isinstance(mini, list):
+        return mini[0]
+    else:
+        return mini
+
+#shows the length of a series of event data (to help selection a range for the functions before)
 def event_length(
     file: str,
     channel_data_dir: str,
@@ -114,7 +110,8 @@ def event_length(
         print(len(lh5_obj.nda[0]))
         if entry >= read_length:
             break
-            
+
+#shows the "metadata" from a array of events
 def print_event_data(
     file: str,
     event: list[int] = [0,1],
@@ -144,10 +141,6 @@ def print_event_data(
     display(data)
     
 """
-
-
-
-
 └── raw
     ├── baseline · array<1>{real}
     ├── channel · array<1>{real}

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import os, json
 import pint
 import pandas
+import math
 import pygama.lgdo.lh5_store as lh5
 from pygama.vis.waveform_browser import WaveformBrowser
 
@@ -16,6 +17,8 @@ def simul_viewer(
     stacked_view: bool = True,
     data_dir: str = "raw",
     linestyle: str = "-",
+    mul_width: int = 3,
+    mul_figsize: tuple[int]= (20,10),
        
     base_path: str = "",
     entry_list: list[int] | list[list[int]] = None,
@@ -59,6 +62,7 @@ def simul_viewer(
     browserlist = []
     for j,b in enumerate(entry):
         for i,a in enumerate(channel):
+            legend = include_channel[i]+" "+str(b)
             browserlist.append(WaveformBrowser(
                 files_in=lh5_file[i],
                 lh5_group=a,
@@ -81,13 +85,24 @@ def simul_viewer(
                 buffer_len = buffer_len,
                 block_width = block_width,
             ))
-    print(len(browserlist))
+            
+    mul_width = 3
+    mul_figsize = (30,10)
+    if not stacked_view:
+        fig, axs = plt.subplots(ncols=mul_width, nrows=math.ceil(len(channel)/mul_width), figsize=mul_figsize,layout="constrained")
     for j,b in enumerate(entry):
         for i,a in enumerate(channel):
-            browserlist[i+(len(channel))*j].draw_entry(b,False,False) 
-            if i+(len(channel))*j < len(browserlist)-1:
-                browserlist[i+(len(channel))*j+1].set_figure(browserlist[0])
+            
+            if stacked_view:
+                browserlist[i+(len(channel))*j].draw_entry(b,False,False)
+                if i+(len(channel))*j < len(browserlist)-1:
+                    browserlist[i+(len(channel))*j+1].set_figure(browserlist[0])
+            
             if not stacked_view:
-                plt.show()
-    return browserlist[-1];
+                browserlist[i+(len(channel))*j].set_figure(fig = fig, ax = axs[math.floor(i/mul_width),i%mul_width])
+                browserlist[i+(len(channel))*j].draw_entry(b,False,False)              
+    if stacked_view:                 
+        return browserlist[0]
+    if stacked_view:                 
+        return fig, axs
 
