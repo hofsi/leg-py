@@ -10,6 +10,7 @@ import sys
 import multiprocessing
 import math
 from scipy.optimize import curve_fit
+from time import time
 
 
 def calc_histogram(
@@ -19,12 +20,50 @@ def calc_histogram(
     
     ):
     pe_eny = []
-    for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):   
+    for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
         for j,m in enumerate(lh5_obj['energies'].nda[0]):
             if not(np.isnan(m)) :
                 pe_eny.append(m)
+
     q.put(np.histogram(pe_eny,1000,range = (0,100)))
 
+"""
+Speed Test:
+
+def calc_histogram(
+    file,
+    cdd,
+    q,
+    
+    ):
+    pe_eny = []
+    dt1 = time()
+    dt5=dt6=dt7=dt8=dt10 = 0
+    for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
+        dt2 = time()
+        for j,m in enumerate(lh5_obj['energies'].nda[0]):
+            dt3 = time()
+            if not(np.isnan(m)) :
+                dt4 = time()
+                pe_eny.append(m)
+                dt5 += time()-dt4
+            dt6 += time() -dt3
+        dt7 += time() -dt2
+    dt8 += time() -dt1
+    
+    print("The Iter needed " + str(dt8-dt7))
+    print("The Enum needed " + str(dt7-dt6))
+    print("The ifno needed " + str(dt6-dt5))
+    print("The appe needed " + str(dt5))
+    dt9 = time()
+    hist = np.histogram(pe_eny,1000,range = (0,100))
+    dt10 += time() -dt9
+    print("The hist needed " + str(dt10))
+    q.put(hist)
+"""
+    
+    
+    
 def create_spectrum(
     file,
     include_channel: list[str] = ["OB-01","OB-02","OB-03","OB-05","OB-06","OB-07","OB-08","OB-09","OB-12","OB-13","OB-14","OB-16","OB-17","OB-21","OB-22","OB-23","OB-24","OB-25","OB-26","OB-28","OB-29","OB-30","OB-31","OB-35","OB-36","OB-37","OB-38","OB-39","OB-40"],
@@ -73,18 +112,22 @@ for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
 """
 
 def gaus(x,a,b,c):
-    return a * math.exp(-((x-b)**2)/(2*c**2))
+    return a * np.exp(-1*((x-b)**2)/(2*c**2))
 
 def fit_gaus(
     histogramm,
     borders,
+    scaling
     ):
     result = []
     convidence = []
-    for i,j in enumerate(hostogramm):
-        res0, conv0 = curve_fit(gaus,j[1][borders[i][0]:borders[i][1]],j[1][borders[i][0]:borders[i][1]])
-        res1, conv1 = curve_fit(gaus,j[1][borders[i][0]:borders[i][1]],j[1][borders[i][0]:borders[i][1]])
-        result.append([res0,res1])
-        convidence.append([conv0,conv1])
+    p0 = [4000,10,2]
+    p1 = [5000,20,2]
+    for i,j in enumerate(histogramm):
+        sys.stdout.write('\r' + str(i+1)+"/"+str(len(histogramm)))
+        res0, conv0 = curve_fit(gaus,j[1][(borders[i][0]*scaling):(borders[i][1]*scaling)],j[0][(borders[i][0]*scaling):(borders[i][1]*scaling)],p0,maxfev=10000)
+        res1, conv1 = curve_fit(gaus,j[1][(borders[i][1]*scaling):(borders[i][2]*scaling)],j[0][(borders[i][1]*scaling):(borders[i][2]*scaling)],p1,maxfev=10000)
+        result.append([res0.tolist(),res1.tolist()])
+        convidence.append([conv0.tolist(),conv1.tolist()])       
     return result, convidence
     
