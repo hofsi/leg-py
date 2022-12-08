@@ -63,6 +63,7 @@ def find_event(
                 event.append(entry)
         channel_fitness.append(fitness)
         event_list.append(event)
+        
     return channel_fitness,event_list
         
 # Funktions for find_event

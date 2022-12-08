@@ -17,7 +17,8 @@ def calc_histogram(
     file,
     cdd,
     q,
-    
+    trigger: float = 1000,
+    var: float = 100
     ):
     pe_eny = []
     for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
@@ -28,7 +29,7 @@ def calc_histogram(
     q.put(np.histogram(pe_eny,1000,range = (0,100)))
 
 """
-Speed Test:
+#Speed Test:
 
 def calc_histogram(
     file,
@@ -96,21 +97,6 @@ def create_spectrum(
     return pe_histograms
 
 
-
-"""
-sys.stdout.write('\r' +"working on " +str(include_channel[i]) +" " + str(i+1)+"/"+str(len(channel_data_dir)))
-        
-for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
-           
-            for j,m in enumerate(lh5_obj['energies'].nda[0]):
-                if not(np.isnan(m)) :
-                    pe_eny.append(m)
-            
-            if not(np.isnan(lh5_obj['energies'].nda[0][0])) :
-                    pe_eny.append(lh5_obj['energies'].nda[0][0])
-            
-"""
-
 def gaus(x,a,b,c):
     return a * np.exp(-1*((x-b)**2)/(2*c**2))
 
@@ -125,8 +111,8 @@ def fit_gaus(
     p1 = [5000,20,2]
     for i,j in enumerate(histogramm):
         sys.stdout.write('\r' + str(i+1)+"/"+str(len(histogramm)))
-        res0, conv0 = curve_fit(gaus,j[1][(borders[i][0]*scaling):(borders[i][1]*scaling)],j[0][(borders[i][0]*scaling):(borders[i][1]*scaling)],p0,maxfev=10000)
-        res1, conv1 = curve_fit(gaus,j[1][(borders[i][1]*scaling):(borders[i][2]*scaling)],j[0][(borders[i][1]*scaling):(borders[i][2]*scaling)],p1,maxfev=10000)
+        res0, conv0 = curve_fit(gaus,j[1][(borders[i][0]*scaling):(borders[i][1]*scaling)],j[0][(borders[i][0]*scaling):(borders[i][1]*scaling)],p0,maxfev=100000)
+        res1, conv1 = curve_fit(gaus,j[1][(borders[i][2]*scaling):(borders[i][3]*scaling)],j[0][(borders[i][2]*scaling):(borders[i][3]*scaling)],p1,maxfev=100000)
         result.append([res0.tolist(),res1.tolist()])
         convidence.append([conv0.tolist(),conv1.tolist()])       
     return result, convidence
