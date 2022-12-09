@@ -19,6 +19,7 @@ def simul_viewer(
     linestyle: str = "-",
     mul_width: int = 3,
     mul_figsize: tuple[int]= (20,10),
+    draw_legend: bool = True,
        
     base_path: str = "",
     entry_list: list[int] | list[list[int]] = None,
@@ -62,7 +63,8 @@ def simul_viewer(
     browserlist = []
     for j,b in enumerate(entry):
         for i,a in enumerate(channel):
-            legend = include_channel[i]+" "+str(b)
+            if draw_legend:
+                legend = include_channel[i]+" "+str(b)
             browserlist.append(WaveformBrowser(
                 files_in=lh5_file[i],
                 lh5_group=a,
@@ -103,6 +105,6 @@ def simul_viewer(
                 browserlist[i+(len(channel))*j].draw_entry(b,False,False)              
     if stacked_view:                 
         return browserlist[0]
-    if stacked_view:                 
+    if not stacked_view:                 
         return fig, axs
 

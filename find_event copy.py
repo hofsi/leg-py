@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib as plt
 from pygama.lgdo.lh5_store import show
 from pygama.lgdo.lh5_store import ls
-import multiprocessing
 
 
 #file = "/mnt/atlas01/users/shofinger/dsp_7/a/113433.lh5"
@@ -23,40 +22,6 @@ var array
 5: var 1         | Depending of analysis function
 6: var 2         | Depending of analysis function
 """
-def channel_itterator(
-    file_entry,
-    channel_data_dir,
-    funk,
-    funk_var,
-    q,
-):
-    #calculates fittness for each channel and event
-    event_fitness = []
-    event_nr = []
-    for i,cdd in enumerate(channel_data_dir):
-        fitness = []
-        nr = []
-        for lh5_obj, entry, n_rows in LH5Iterator(file_entry, cdd ,buffer_len=100):
-            #print(f"entry {entry}, energy = {lh5_obj} ({n_rows} rows)") #do not run it with buffer_len=1
-            for a in range(len(lh5_obj)):
-                fit = 0
-                for num,fun in enumerate(funk):
-                    fit += fun(lh5_obj.nda[a],funk_var[num]) /funk_var[num][0]
-                fitness.append(fit)
-                nr.append(entry+a)  
-        event_fitness.append(fitness)
-        event_nr.append(nr)
-
-    for i in range(len(event_fitness[0])):
-        fit = 0
-        for j in range(len(event_fitness)):
-            fit += event_fitness[j][i]
-        if fit > minfit:
-            channel_fitness.append((fit,event_nr[0][i]))
-    
-    q.put(sorted(channel_fitness,reverse=True))
-    
-
 
 def find_event(
     file_list:list[str],
@@ -67,7 +32,13 @@ def find_event(
     data_dir: str = "/raw/waveform/values",
     
     ):
-
+    
+    
+    
+    
+    
+    
+    
     #creates dictionary and selects channels form input channel names
     cmap = open("/mnt/atlas01/projects/legend/data/com/raw/2022-04-13-sipm-test/channel-map.json")
     channel_map = json.load(cmap)
@@ -77,20 +48,37 @@ def find_event(
     channel_data_dir=[channel_dict[i]+data_dir for i in include_channel]
     
     fittnes_dict = {}
-    ctx = multiprocessing.get_context('spawn')
-    q = []
-    process = []
-    for i,file_entry in enumerate(file_list):
-        q.append(ctx.Queue())
-        process.append(multiprocessing.Process(target=channel_itterator,args=(file_entry,channel_data_dir,funk,funk_var,q[i])))
-        process[i].start()
-    channel_fitness= []
-    for i,file_entry in enumerate(file_list):
-        channel_fitness.append(q[i].get())
-        process[i].join()
-        print("Process for "+ str(file_entry)+ " has finished" )
+    for file in file_list:
+        #calculates fittness for each channel and event
+        event_fitness = []
+        event_nr = []
+        for i,cdd in enumerate(channel_data_dir):
+            fitness = []
+            nr = []
+            for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=100):
+                #print(f"entry {entry}, energy = {lh5_obj} ({n_rows} rows)") #do not run it with buffer_len=1
+                for a in range(len(lh5_obj)):
+                    fit = 0
+                    for num,fun in enumerate(funk):
+                        fit += fun(lh5_obj.nda[a],funk_var[num]) /funk_var[num][0]
+                    fitness.append(fit)
+                    nr.append(entry+a)  
+            event_fitness.append(fitness)
+            event_nr.append(nr)
+            print("Finnished: "+str(cdd))
+        print("Finnished: "+str(file))
+
+        channel_fitness = []
+        for i in range(len(event_fitness[0])):
+            fit = 0
+            for j in range(len(event_fitness)):
+                fit += event_fitness[j][i]
+            if fit > minfit:
+                channel_fitness.append((fit,event_nr[0][i]))
         
-        fittnes_dict[file_entry] = channel_fitness
+        channel_fitness = sorted(channel_fitness,reverse=True)
+        
+        fittnes_dict[file] = channel_fitness
     return fittnes_dict
         
 # Funktions for find_event

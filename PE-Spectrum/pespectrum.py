@@ -21,10 +21,11 @@ def calc_histogram(
     var: float = 100
     ):
     pe_eny = []
-    for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1):
-        for j,m in enumerate(lh5_obj['energies'].nda[0]):
-            if not(np.isnan(m)) :
-                pe_eny.append(m)
+    for lh5_obj, entry, n_rows in LH5Iterator(file, cdd ,buffer_len=1000):
+        for i in lh5_obj['energies'].nda:
+            for m in i:
+                if not(np.isnan(m)):
+                    pe_eny.append(m)
 
     q.put(np.histogram(pe_eny,1000,range = (0,100)))
 
