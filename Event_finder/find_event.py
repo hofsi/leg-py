@@ -1,6 +1,7 @@
 import os, json
 import pygama.lgdo.lh5_store as lh5
 from pygama.lgdo import LH5Iterator
+from pygama.lgdo import LH5Store
 import numpy as np
 import pandas as pd
 import matplotlib as plt
@@ -30,24 +31,31 @@ def channel_itterator(
     funk_var,
     minfit,
     q,
+    calibration,
+    include_channel,
 ):
     #calculates fittness for each channel and event
     event_fitness = []
     event_nr = []
+  
     for i,cdd in enumerate(channel_data_dir):
+
         fitness = []
         nr = []
+
+        obj = store.read_object(cdd[0:10] + "baseline",file_entry)[0]      
         for lh5_obj, entry, n_rows in LH5Iterator(file_entry, cdd ,buffer_len=100):
             #print(f"entry {entry}, energy = {lh5_obj} ({n_rows} rows)") #do not run it with buffer_len=1
-            for a in range(len(lh5_obj)):
+            for a in range(n_rows):
                 fit = 0
-                for num,fun in enumerate(funk):
-                    fit += fun(lh5_obj.nda[a],funk_var[num]) /funk_var[num][0]
+                for num,fun in enumerate(funk):                   
+                    fit += fun(lh5_obj.nda[a],funk_var[num],obj.nda[entry+a]) /funk_var[num][0] / (calibration[include_channel[i]][1][1] - calibration[include_channel[i]][0][1])
                 fitness.append(fit)
                 nr.append(entry+a)  
         event_fitness.append(fitness)
         event_nr.append(nr)
     channel_fitness = []
+    
     for i in range(len(event_fitness[0])):
         fit = 0
         for j in range(len(event_fitness)):
@@ -64,8 +72,9 @@ def find_event(
     funk:list = [],
     funk_var:list[list[int]] = [[]],
     minfit: float = 0,                                                 #is scalled by the ammount of channels
-    include_channel: list[str] = ["OB-01","OB-02"],
+    include_channel: list[str] = ["OB-01","OB-02","OB-03","OB-05","OB-06","OB-07","OB-08","OB-09","OB-12","OB-13","OB-14","OB-17","OB-21","OB-22","OB-23","OB-24","OB-25","OB-26","OB-28","OB-29","OB-31","OB-35","OB-36","OB-37","OB-38","OB-39","OB-40"],
     data_dir: str = "/raw/waveform/values",
+    calibration_file: str = "calibration_data_231824"
     
     ):
 
@@ -75,15 +84,22 @@ def find_event(
     channel_dict = {}
     for i in channel_map["hardware_configuration"]["channel_map"]:
         channel_dict[channel_map["hardware_configuration"]["channel_map"][i]["det_id"]] = i
+        
     channel_data_dir=[channel_dict[i]+data_dir for i in include_channel]
     
+    
+    with open(calibration_file, 'r') as openfile:
+        calibration = json.load(openfile)
+    
+    channel_name_list = [channel_map["hardware_configuration"]["channel_map"][i]["det_id"] for i in channel_map["hardware_configuration"]["channel_map"]]
+ 
     fittnes_dict = {}
     ctx = multiprocessing.get_context('spawn')
     q = []
     process = []
     for i,file_entry in enumerate(file_list):
         q.append(ctx.Queue())
-        process.append(multiprocessing.Process(target=channel_itterator,args=(file_entry,channel_data_dir,funk,funk_var,minfit,q[i])))
+        process.append(multiprocessing.Process(target=channel_itterator,args=(file_entry,channel_data_dir,funk,funk_var,minfit,q[i],calibration,include_channel)))
         process[i].start()
     
     for i,file_entry in enumerate(file_list):
@@ -98,34 +114,37 @@ def find_event(
 def average(
     data: np.ndarray,
     var: list,
+    baseline: float,
     ):
     data = data[var[3]:var[4]]
-    return np.average(data)
+    return (np.average(data,returned=False)-baseline)
 
 #returns the first absolute maxiumum of the event
 def max_val(
     data: np.ndarray,
     var: list,
+    baseline: float,
 ):
     data = data[var[3]:var[4]]    
     maxi = np.nanmax(data)
     if isinstance(maxi, list):
-        return maxi[0]
+        return maxi[0] - baseline
     else:
-        return maxi
+        return maxi - baseline
     
 #returns the first absolute miniumum of the event
 def min_val(
     data: np.ndarray,
     var: list,
+    baseline: float,
 ):
     data = data[var[3]:var[4]]
     data = data[var[3]:var[4]]    
     mini = np.nanmin(data)
     if isinstance(mini, list):
-        return mini[0]
+        return mini[0]-baseline
     else:
-        return mini
+        return mini - baseline
 
 #shows the length of a series of event data (to help selection a range for the functions before)
 def event_length(
@@ -135,7 +154,13 @@ def event_length(
     read_length: int = 10,
 ):
     for lh5_obj, entry, n_rows in LH5Iterator(file, channel_data_dir ,buffer_len=1):
+        """2
+        print(lh5_obj.nda)
+        """
         print(len(lh5_obj.nda[0]))
+        if 'event' in locals():
+            print(lh5_obj.nda[0][event])
+        
         if entry >= read_length:
             break
 

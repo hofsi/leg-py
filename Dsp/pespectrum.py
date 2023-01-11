@@ -26,7 +26,7 @@ def calc_histogram(
                 if not(np.isnan(m)):
                     pe_eny.append(m)
 
-    q.put(np.histogram(pe_eny,1000,range = (0,100)))
+    q.put(np.histogram(pe_eny,10000,range = (0,1000)))
 
 """
 #Speed Test:
@@ -66,7 +66,7 @@ def calc_histogram(
     
     
 def create_spectrum(
-    file,
+    file_list: list[str],
     include_channel: list[str] = ["OB-01","OB-02","OB-03","OB-05","OB-06","OB-07","OB-08","OB-09","OB-12","OB-13","OB-14","OB-16","OB-17","OB-21","OB-22","OB-23","OB-24","OB-25","OB-26","OB-28","OB-29","OB-30","OB-31","OB-35","OB-36","OB-37","OB-38","OB-39","OB-40"],
     data_dir: str = "/dsp",
     simul_process: int = 1, 
@@ -81,21 +81,42 @@ def create_spectrum(
         channel_dict[channel_map["hardware_configuration"]["channel_map"][i]["det_id"]] = i
     channel_data_dir=[channel_dict[i]+data_dir for i in include_channel]
     
-    ctx = multiprocessing.get_context('spawn')
+
     pe_histograms = []
-    process = []
-    pe_eny = []
-    q = []
-    for i,cdd in enumerate(channel_data_dir):
-        q.append(ctx.Queue())
-        process.append(multiprocessing.Process(target=calc_histogram,args=(file,cdd,q[i])))
-        process[i].start()
-    for i,_ in enumerate(channel_data_dir):
-        pe_histograms.append(q[i].get())
-        process[i].join()
-        print("Process for "+ str(include_channel[i])+ " has finished" )
+
+    for file in file_list:
+        ctx = multiprocessing.get_context('spawn')
+        process = []
+        q = []
+
+        pe_histogram = []
+        for i,cdd in enumerate(channel_data_dir):
+            q.append(ctx.Queue())
+            process.append(multiprocessing.Process(target=calc_histogram,args=(file,cdd,q[i])))
+            process[i].start()
+        for i,_ in enumerate(channel_data_dir):
+            pe_histogram.append(q[i].get())
+            process[i].join()
+            print("Process for "+ str(include_channel[i])+ " "+ str(file) + " has finished" )
+        pe_histograms.append(pe_histogram)
     return pe_histograms
 
+def add_together(
+    pe_histograms: list[list[int]],
+    scaling: list[float],               #Raw Results File
+):
+    com_hist = np.zeros(600)
+    
+    for i in range(len(pe_histograms)):                 #File
+        for j in range(len(pe_histograms[i])):          #Channel
+            for k, val in enumerate(pe_histograms[i][j][1]):
+                a = round((val / (scaling[j][1][1]-scaling[j][0][1]))*100)      
+                if a >= 0 and a < 600:
+                    com_hist[a] += pe_histograms[i][j][0][k]
+                    
+     
+    return com_hist
+    
 
 def gaus(x,a,b,c):
     return a * np.exp(-1*((x-b)**2)/(2*c**2))
